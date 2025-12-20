@@ -53,3 +53,4 @@ portfolio/
 ## Deployment
 
 The application is configured for deployment on modern cloud platforms with Docker support.
+
