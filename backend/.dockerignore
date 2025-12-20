@@ -1,0 +1,12 @@
+main_demo.go
+main_demo
+seed_db.go
+portfolio-backend
+portfolio-backend-sqlite
+portfolio.db
+*.db
+.env
+
+
+
+
