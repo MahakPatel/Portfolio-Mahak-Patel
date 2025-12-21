@@ -155,7 +155,7 @@ func main() {
 	publications := []models.Publication{
 		{
 			Title:   "Machine-learning techniques for the detection of powdery mildew in vineyards",
-			Authors: "Mahak Patel, Dr. Shalini Rawal",
+			Authors: "Mahakbhai Patel",
 			Journal: "SPIE Defense + Commercial Sensing, 2025",
 			Year:    2025,
 			DOI:     "10.1117/12.3066315",
