@@ -13,8 +13,8 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		DatabaseURL: getEnv("DATABASE_URL", "host=localhost port=5434 user=portfolio_user password=portfolio_password dbname=portfolio sslmode=disable"),
-		GitHubToken: getEnv("GITHUB_TOKEN", ""),
+		DatabaseURL: os.Getenv("DATABASE_URL"), // ❗ NO default
+		GitHubToken: os.Getenv("GITHUB_TOKEN"),
 		JWTSecret:   getEnv("JWT_SECRET", "your-secret-key"),
 		Port:        getEnv("PORT", "8080"),
 	}
