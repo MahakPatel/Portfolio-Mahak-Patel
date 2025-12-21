@@ -14,7 +14,7 @@ import (
 func Initialize(databaseURL string) (*gorm.DB, error) {
 	// Use PostgreSQL
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
 	Logger: logger.Default.LogMode(logger.Info),
 	PrepareStmt: false,
 	})
