@@ -13,6 +13,21 @@ type SchedulerService struct {
 	db            *gorm.DB
 	githubService *GitHubService
 	emailService  *EmailService
+	githubUsername string
+}
+
+func NewSchedulerService(db *gorm.DB, githubService *GitHubService, emailService *EmailService) *SchedulerService {
+	return &SchedulerService{
+		db:            db,
+		githubService: githubService,
+		emailService:  emailService,
+		githubUsername: "", // Will be set via SetGitHubUsername
+	}
+}
+
+// SetGitHubUsername sets the GitHub username for fetching stats
+func (s *SchedulerService) SetGitHubUsername(username string) {
+	s.githubUsername = username
 }
 
 type CachedStats struct {
@@ -24,13 +39,6 @@ type CachedStats struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-func NewSchedulerService(db *gorm.DB, githubService *GitHubService, emailService *EmailService) *SchedulerService {
-	return &SchedulerService{
-		db:            db,
-		githubService: githubService,
-		emailService:  emailService,
-	}
-}
 
 func (s *SchedulerService) StartScheduler() {
 	log.Println("Starting scheduler service...")
@@ -38,17 +46,20 @@ func (s *SchedulerService) StartScheduler() {
 	// Run immediately on startup
 	go s.runScheduledTasks()
 
-	// Schedule weekly runs (every Sunday at 2 AM)
-	ticker := time.NewTicker(24 * time.Hour)
+	// Schedule daily runs (every day at 2 AM)
+	ticker := time.NewTicker(1 * time.Hour) // Check every hour
 	go func() {
+		lastRunDate := time.Now().Format("2006-01-02")
 		for {
 			select {
 			case <-ticker.C:
 				now := time.Now()
-				// Check if it's Sunday at 2 AM
-				if now.Weekday() == time.Sunday && now.Hour() == 2 {
-					log.Println("Running weekly scheduled tasks...")
+				currentDate := now.Format("2006-01-02")
+				// Run at 2 AM every day (only once per day)
+				if now.Hour() == 2 && now.Minute() < 5 && currentDate != lastRunDate {
+					log.Println("Running daily scheduled tasks...")
 					s.runScheduledTasks()
+					lastRunDate = currentDate
 				}
 			}
 		}
@@ -84,69 +95,59 @@ func (s *SchedulerService) RunScheduledTasks() {
 func (s *SchedulerService) fetchGitHubStats() error {
 	log.Println("Fetching GitHub stats...")
 
-	// Get GitHub username from environment or config
-	username := "mahakpatel" // Updated to correct username
-
-	// Fetch GitHub stats (this would need to be implemented in GitHubService)
-	// For now, we'll create a placeholder
-	stats := map[string]interface{}{
-		"username":            username,
-		"totalStars":          10,
-		"totalForks":          0,
-		"totalRepos":          10,
-		"totalCommits":        150,
-		"totalContributions":  3323,
-		"longestStreak":       104,
-		"streakEndDate":       "Sep 30, 2024",
-		"longestStreakPeriod": "Jun 19, 2024 - Sep 30, 2024",
-		"languages": map[string]int{
-			"C++":    40,
-			"Python": 25,
-			"CSS":    15,
-			"Dart":   10,
-			"Go":     10,
-		},
-		"recentRepos": []map[string]interface{}{
-			{
-				"name":        "LeetCode",
-				"description": "LeetCode solutions and algorithms",
-				"url":         fmt.Sprintf("https://github.com/%s/LeetCode", username),
-				"stars":       1,
-				"language":    "C++",
-			},
-			{
-				"name":        "GeeksForGeeks",
-				"description": "GeeksforGeeks practice problems",
-				"url":         fmt.Sprintf("https://github.com/%s/GeeksForGeeks", username),
-				"stars":       1,
-				"language":    "C++",
-			},
-			{
-				"name":        "Online-Salon-Management",
-				"description": "Salon booking and management system",
-				"url":         fmt.Sprintf("https://github.com/%s/Online-Salon-Management", username),
-				"stars":       1,
-				"language":    "CSS",
-			},
-			{
-				"name":        "Restaurant-Billing-System",
-				"description": "Restaurant billing and inventory system",
-				"url":         fmt.Sprintf("https://github.com/%s/Restaurant-Billing-System", username),
-				"stars":       1,
-				"language":    "Python",
-			},
-			{
-				"name":        "News_App",
-				"description": "Mobile news application",
-				"url":         fmt.Sprintf("https://github.com/%s/News_App", username),
-				"stars":       1,
-				"language":    "Dart",
-			},
-		},
-		"fetchedAt": time.Now(),
+	// Get GitHub username
+	username := s.githubUsername
+	if username == "" {
+		username = "mahakpatel" // Fallback default
+		log.Printf("Warning: GitHub username not set, using default: %s", username)
 	}
 
-	return s.cacheStats("github", stats)
+	// Fetch real GitHub stats using GitHubService
+	stats, err := s.githubService.GetUserStats(username)
+	if err != nil {
+		log.Printf("Error fetching GitHub stats: %v", err)
+		// Return error to allow retry
+		return fmt.Errorf("failed to fetch GitHub stats: %w", err)
+	}
+
+	// Convert GitHubStats to map for caching
+	statsMap := map[string]interface{}{
+		"username":            stats.Username,
+		"totalStars":          stats.TotalStars,
+		"totalForks":          stats.TotalForks,
+		"totalRepos":          stats.TotalRepos,
+		"totalCommits":        stats.TotalCommits,
+		"totalContributions":  stats.TotalContributions,
+		"currentStreak":       stats.CurrentStreak,
+		"longestStreak":       stats.LongestStreak,
+		"streakEndDate":       stats.StreakEndDate,
+		"longestStreakPeriod": stats.LongestStreakPeriod,
+		"languages":           stats.Languages,
+		"recentRepos":         convertReposToMap(stats.RecentRepos),
+		"fetchedAt":           stats.FetchedAt,
+	}
+
+	log.Printf("Successfully fetched GitHub stats for %s: %d repos, %d stars, %d forks", 
+		username, stats.TotalRepos, stats.TotalStars, stats.TotalForks)
+
+	return s.cacheStats("github", statsMap)
+}
+
+// convertReposToMap converts RepositoryInfo slice to map slice for JSON storage
+func convertReposToMap(repos []RepositoryInfo) []map[string]interface{} {
+	result := make([]map[string]interface{}, len(repos))
+	for i, repo := range repos {
+		result[i] = map[string]interface{}{
+			"name":        repo.Name,
+			"description": repo.Description,
+			"stars":       repo.Stars,
+			"forks":       repo.Forks,
+			"language":    repo.Language,
+			"url":         repo.URL,
+			"updated_at":  repo.UpdatedAt.Format(time.RFC3339),
+		}
+	}
+	return result
 }
 
 func (s *SchedulerService) fetchLeetCodeStats() error {

@@ -34,6 +34,7 @@ cp .env.example .env
 2. Update the `.env` file with your configuration:
 ```env
 GITHUB_TOKEN=your_github_personal_access_token
+GITHUB_USERNAME=your_github_username
 JWT_SECRET=your_jwt_secret_key
 ```
 
@@ -56,6 +57,7 @@ go mod download
 # Set environment variables
 export DATABASE_URL="postgres://portfolio_user:portfolio_password@localhost:5432/portfolio?sslmode=disable"
 export GITHUB_TOKEN="your_github_token"
+export GITHUB_USERNAME="your_github_username"
 export JWT_SECRET="your_jwt_secret"
 
 # Run the server
@@ -107,12 +109,22 @@ Use the admin dashboard at `/admin` to:
 1. Create a GitHub Personal Access Token:
    - Go to GitHub Settings > Developer settings > Personal access tokens
    - Generate a new token with `repo` scope
-   - Add the token to your `.env` file
+   - Add the token to your `.env` file as `GITHUB_TOKEN`
 
-2. Sync your GitHub projects:
+2. Set your GitHub username:
+   - Add `GITHUB_USERNAME=your_github_username` to your `.env` file
+   - This will be used for automatic daily stats fetching
+
+3. Sync your GitHub projects:
    - Go to Admin Dashboard > Projects
    - Enter your GitHub username
    - Click "Sync Projects"
+
+**Note**: GitHub stats are automatically fetched daily at 2 AM. The stats include:
+- Total stars, forks, and repositories
+- Language statistics
+- Recent repositories
+- Contribution statistics (when available)
 
 ### 3. Customize Your Portfolio
 
@@ -238,6 +250,10 @@ docker-compose logs -f postgres
 - `GET /api/v1/education` - Get education
 - `GET /api/v1/publications` - Get publications
 - `POST /api/v1/contact` - Send contact message
+- `GET /api/v1/stats/github` - Get GitHub statistics (fetched daily)
+- `GET /api/v1/stats/leetcode` - Get LeetCode statistics
+- `GET /api/v1/stats/geeksforgeeks` - Get GeeksforGeeks statistics
+- `POST /api/v1/stats/update` - Manually trigger stats update
 
 ### Admin Endpoints
 

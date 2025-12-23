@@ -5,18 +5,20 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string
-	GitHubToken string
-	JWTSecret   string
-	Port        string
+	DatabaseURL    string
+	GitHubToken    string
+	GitHubUsername string
+	JWTSecret      string
+	Port           string
 }
 
 func Load() *Config {
 	return &Config{
-		DatabaseURL: os.Getenv("DATABASE_URL"), // ❗ NO default
-		GitHubToken: os.Getenv("GITHUB_TOKEN"),
-		JWTSecret:   getEnv("JWT_SECRET", "your-secret-key"),
-		Port:        getEnv("PORT", "8080"),
+		DatabaseURL:    os.Getenv("DATABASE_URL"), // ❗ NO default
+		GitHubToken:    os.Getenv("GITHUB_TOKEN"),
+		GitHubUsername: getEnv("GITHUB_USERNAME", "mahakpatel"),
+		JWTSecret:      getEnv("JWT_SECRET", "your-secret-key"),
+		Port:           getEnv("PORT", "8080"),
 	}
 }
 

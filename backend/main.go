@@ -43,6 +43,10 @@ func main() {
 	schedulerService := services.NewSchedulerService(db, githubService, emailService)
 	analyticsService := services.NewAnalyticsService(db)
 
+	// Set GitHub username for scheduler
+	schedulerService.SetGitHubUsername(cfg.GitHubUsername)
+
+	// Start scheduler service
 	schedulerService.StartScheduler()
 
 	// Initialize handlers
@@ -108,11 +112,13 @@ func main() {
 		api.GET("/publications", portfolioHandler.GetPublications)
 		api.POST("/contact", portfolioHandler.SendContactMessage)
 
+		// Stats routes
 		api.GET("/stats/github", portfolioHandler.GetGitHubStats)
 		api.GET("/stats/leetcode", portfolioHandler.GetLeetCodeStats)
 		api.GET("/stats/geeksforgeeks", portfolioHandler.GetGeeksforGeeksStats)
 		api.POST("/stats/update", portfolioHandler.UpdateStats)
 
+		// Admin login (public route)
 		api.POST("/admin/login", adminHandler.Login)
 	}
 
@@ -163,6 +169,7 @@ func main() {
 
 		admin.POST("/sync-github", adminHandler.SyncGitHubProjects)
 
+		// Analytics routes
 		admin.GET("/analytics", analyticsHandler.GetAnalyticsSummary)
 		admin.GET("/analytics/realtime", analyticsHandler.GetRealTimeStats)
 	}
